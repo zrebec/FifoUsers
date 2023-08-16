@@ -20,10 +20,6 @@ public class Main {
 
             // delete user Joseph and try print it again
             dbManager.deleteUser(3);
-            user = dbManager.getUser(3);
-            if(user == null) {
-                System.out.println("The user doesn't exists");
-            }
 
             // print all existing users
             dbManager.printAll();

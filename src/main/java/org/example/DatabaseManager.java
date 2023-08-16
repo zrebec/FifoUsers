@@ -1,42 +1,63 @@
 package org.example;
 
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.Persistence;
-import javax.persistence.TypedQuery;
+import javax.persistence.*;
 import java.util.List;
-import java.util.function.Consumer;
 
 public class DatabaseManager {
-    private final EntityManagerFactory emf = Persistence.createEntityManagerFactory("suser-persistence");
 
-    private void executeInTransaction(Consumer<EntityManager> action) {
-        EntityManager em = emf.createEntityManager();
-        try {
-            em.getTransaction().begin();
-            action.accept(em);
-            em.getTransaction().commit();
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            em.close();
+    public static class UserNotFoundException extends RuntimeException {
+        public UserNotFoundException(String message) {
+            super(message);
         }
     }
 
+    public static class DatabaseException extends RuntimeException {
+        public DatabaseException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    public static class InvalidInputException extends RuntimeException {
+        public InvalidInputException(String message) {
+            super(message);
+        }
+    }
+    private final EntityManagerFactory emf = Persistence.createEntityManagerFactory("suser-persistence");
+
     public void addUser(int userId, String userGuid, String userName) {
-        executeInTransaction(em -> {
+        EntityManager em = emf.createEntityManager();
+        try {
+            em.getTransaction().begin();
+
+            // At first, we must check if user already exists
+            if(em.find(SUser.class, userId) != null) {
+                throw new InvalidInputException("User with ID " + userId + " already exists");
+            }
+
+            // Creating new user
             SUser user = new SUser();
             user.setUserId(userId);
             user.setUserGuid(userGuid);
             user.setUserName(userName);
             em.persist(user);
-        });
+            em.getTransaction().commit();
+        } catch(Exception e) {
+            // Rollback transaction if we have a problem to create a user
+            em.getTransaction().rollback();
+            throw new DatabaseException("Problem with adding user: ", e);
+        } finally {
+            em.close();
+        }
     }
 
     public SUser getUser(int userId) {
         EntityManager em = emf.createEntityManager();
         try {
-            return em.find(SUser.class, userId);
+            SUser user = em.find(SUser.class, userId);
+            if(user == null) {
+                throw new UserNotFoundException("User with ID " + userId + " not found.");
+            }
+            return user;
         } finally {
             em.close();
         }
@@ -56,15 +77,35 @@ public class DatabaseManager {
     }
 
     public void deleteUser(int userId) {
-        executeInTransaction(em -> {
+        EntityManager em = emf.createEntityManager();
+        try {
+            em.getTransaction().begin();
+
             SUser user = em.find(SUser.class, userId);
-            if (user != null) {
+            if(user != null) {
                 em.remove(user);
             }
-        });
+
+            em.getTransaction().commit();
+        } catch(Exception e) {
+            em.getTransaction().rollback();
+            throw new DatabaseException("Problem with deleting user: ", e);
+        } finally {
+            em.close();
+        }
     }
 
     public void deleteAll() {
-        executeInTransaction(em -> em.createQuery("DELETE FROM SUser").executeUpdate());
+        EntityManager em = emf.createEntityManager();
+        try {
+            em.getTransaction().begin();
+            em.createQuery("DELETE FROM SUser").executeUpdate();
+            em.getTransaction().commit();
+        } catch (Exception e) {
+            em.getTransaction().rollback();
+            System.err.println("We cannot delete all users. Reason: " + e);
+        } finally {
+            em.close();
+        }
     }
 }

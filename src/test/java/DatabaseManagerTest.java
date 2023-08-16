@@ -34,6 +34,9 @@ public class DatabaseManagerTest {
         SUser martin = dbManager.getUser(2);
         assertEquals("a2", martin.getUserGuid());
         assertEquals("Martin", martin.getUserName());
+
+        // Ensure that we get an exception if we try to add a user with an existing ID
+        assertThrows(DatabaseManager.DatabaseException.class, () -> dbManager.addUser(2, "a3", "Steve"));
     }
 
     @Test
