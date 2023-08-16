@@ -5,7 +5,7 @@ import java.sql.DriverManager;
 import java.sql.Statement;
 
 public class DatabaseInitializer {
-    public static void initalize() throws Exception {
+    public static void initialize() throws Exception {
         // load H2 db driver
         Class.forName("org.h2.Driver");
 

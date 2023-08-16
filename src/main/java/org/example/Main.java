@@ -4,7 +4,7 @@ public class Main {
     public static void main(String[] args) {
         try {
             // database init
-            DatabaseInitializer.initalize();
+            DatabaseInitializer.initialize();
             DatabaseManager dbManager = new DatabaseManager();
 
             // add users
